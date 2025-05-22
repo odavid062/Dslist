@@ -114,22 +114,20 @@ public class Game {
         this.longDescription = longDescription;
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
 
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
             return true;
-        if (obj == null )
+        if (obj == null)
             return false;
         if (getClass() != obj.getClass())
             return false;
         Game other = (Game) obj;
         return Objects.equals(id, other.id);
     }
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
-
-
 }

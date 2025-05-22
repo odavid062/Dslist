@@ -11,7 +11,7 @@ import java.util.Objects;
 public class Belonging {
 
     @EmbeddedId
-    private BelongingPk id = new BelongingPk();
+    private BelongingPK id = new BelongingPK();
 
     private Integer position;
 
@@ -25,11 +25,11 @@ public class Belonging {
         this.position = position;
     }
 
-    public BelongingPk getId() {
+    public BelongingPK getId() {
         return id;
     }
 
-    public void setId(BelongingPk id) {
+    public void setId(BelongingPK id) {
         this.id = id;
     }
 
@@ -42,19 +42,19 @@ public class Belonging {
     }
 
     @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj )
+        if (this == obj)
             return true;
         if (obj == null)
             return false;
         if (getClass() != obj.getClass())
             return false;
-        Belonging other  = (Belonging) obj;
+        Belonging other = (Belonging) obj;
         return Objects.equals(id, other.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
     }
 }

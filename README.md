@@ -1,76 +1,84 @@
-Dslist
-Dslist é uma aplicação web desenvolvida com Java e Spring Boot, projetada para gerenciar listas de jogos. Ela permite que os usuários visualizem e organizem jogos em diferentes listas, facilitando o acesso e a categorização de seus títulos favoritos.
+# 🕹️ Dslist
 
-🚀 Tecnologias Utilizadas
-Java 17
+**Dslist** é uma aplicação web desenvolvida com Java e Spring Boot, projetada para gerenciar listas de jogos.  
+Ela permite que os usuários visualizem e organizem jogos em diferentes listas, facilitando o acesso e a categorização de seus títulos favoritos.
 
-Spring Boot
+---
 
-Maven
+## 🚀 Tecnologias Utilizadas
 
-Docker
+- Java 17
+- Spring Boot
+- Maven
+- Banco de Dados H2 (ou PostgreSQL, conforme configuração)
 
-Banco de Dados H2 (ou outro, conforme configuração)
+---
 
-📦 Como Executar o Projeto
-Pré-requisitos
-Java 17 instalado
+## 📦 Como Executar o Projeto
 
-Maven instalado
+### ✅ Pré-requisitos
 
-Docker instalado (opcional, para execução via Docker)
+- Java 17 instalado
+- Maven instalado
 
-Passos para Execução
-Clone o repositório:
+### ▶️ Passos para Execução
 
-bash
-Copiar
-Editar
-git clone https://github.com/odavid062/Dslist.git
-cd Dslist
-Compile o projeto com Maven:
+1. Clone o repositório:
 
-bash
-Copiar
-Editar
-./mvnw clean install
-Execute a aplicação:
+   ```bash
+   git clone https://github.com/odavid062/Dslist.git
+   cd Dslist
+   ```
 
-bash
-Copiar
-Editar
-./mvnw spring-boot:run
-Acesse a aplicação no navegador:
+2. Compile o projeto com Maven:
 
-arduino
-Copiar
-Editar
-http://localhost:8080
-Executando com Docker
-Se preferir, você pode executar a aplicação usando Docker:
+   ```bash
+   ./mvnw clean install
+   ```
 
-bash
-Copiar
-Editar
-docker-compose up
-🛠️ Estrutura do Projeto
-O projeto segue a estrutura padrão do Spring Boot:
+3. Execute a aplicação:
 
-src/main/java: Contém o código-fonte da aplicação
+   ```bash
+   ./mvnw spring-boot:run
+   ```
 
-src/main/resources: Contém os arquivos de configuração e recursos estáticos
+4. Acesse a aplicação no navegador:
 
-pom.xml: Arquivo de configuração do Maven
+   [http://localhost:8080](http://localhost:8080)
 
-📄 Documentação da API
-A documentação da API pode ser acessada (se configurada) através do Swagger:
 
-bash
-Copiar
-Editar
-http://localhost:8080/swagger-ui.html
-🤝 Contribuindo
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
+---
 
-📄 Licença
-Este projeto está licenciado sob a Licença MIT. Consulte o arquivo LICENSE para obter mais informações.
+## 📂 Estrutura do Projeto
+
+```
+Dslist/
+├── src/
+│   └── main/
+│       ├── java/          # Código-fonte da aplicação
+│       └── resources/     # Arquivos de configuração e recursos estáticos
+└──  pom.xml                # Arquivo de build e dependências (Maven)
+
+```
+
+---
+
+## 📄 Documentação da API
+
+Se o Swagger estiver habilitado, a documentação da API estará disponível em:
+
+[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+---
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas!  
+Sinta-se à vontade para abrir *issues* ou enviar *pull requests*.
+
+---
+
+## 📜 Licença
+
+Este projeto está licenciado sob a Licença MIT.  
+Consulte o arquivo [LICENSE](LICENSE) para mais informações.

@@ -35,8 +35,16 @@ public class GameListService {
         GameMinProjection obj = list.remove(sourceIndex);
         list.add(destinationIndex, obj);
 
-        int min = sourceIndex < destinationIndex ? sourceIndex : destinationIndex;
-        int max = sourceIndex < destinationIndex ? destinationIndex : sourceIndex;
+        int min, max;
+
+        if (sourceIndex < destinationIndex) {
+            min = sourceIndex;
+            max = destinationIndex;
+        } else {
+            min = destinationIndex;
+            max = sourceIndex;
+        }
+
 
         for (int i = min; i <= max; i++) {
             gameListRepository.updateBelongingPosition(listId, list.get(i).getId(), i);
@@ -48,4 +56,5 @@ public class GameListService {
         GameList entity = gameListRepository.findById(id).get();
         return new GameListDto(entity);
     }
+
 }

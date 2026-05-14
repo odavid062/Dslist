@@ -1,84 +1,226 @@
-# 🕹️ Dslist
+# DSList — API de Listas de Jogos
 
-**Dslist** é uma aplicação web desenvolvida com Java e Spring Boot, projetada para gerenciar listas de jogos.  
-Ela permite que os usuários visualizem e organizem jogos em diferentes listas, facilitando o acesso e a categorização de seus títulos favoritos.
+API REST para gerenciamento e organização de listas de jogos com suporte a **reordenação dinâmica de posição** — o usuário pode mover um jogo dentro de uma lista e a ordem é persistida no banco.
 
----
-
-## 🚀 Tecnologias Utilizadas
-
-- Java 17
-- Spring Boot
-- Maven
-- Banco de Dados H2 (ou PostgreSQL, conforme configuração)
+[![Java](https://img.shields.io/badge/Java-17-orange?logo=openjdk)](https://openjdk.org/projects/jdk/17/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-brightgreen?logo=springboot)](https://spring.io/projects/spring-boot)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-blue?logo=postgresql)](https://www.postgresql.org/)
+[![H2](https://img.shields.io/badge/H2-em%20mem%C3%B3ria-blue)](https://www.h2database.com/)
+[![Swagger](https://img.shields.io/badge/Swagger-OpenAPI%203-85EA2D?logo=swagger)](http://localhost:8080/swagger-ui.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
-## 📦 Como Executar o Projeto
+## Modelo de Domínio
 
-### ✅ Pré-requisitos
+```mermaid
+erDiagram
+    GAME {
+        Long id
+        String title
+        Integer gameYear
+        String genre
+        String platforms
+        Double score
+        String imgUrl
+        String shortDescription
+        String longDescription
+    }
+    GAME_LIST {
+        Long id
+        String name
+    }
+    BELONGING {
+        Long game_id FK
+        Long list_id FK
+        Integer position
+    }
 
-- Java 17 instalado
-- Maven instalado
-
-### ▶️ Passos para Execução
-
-1. Clone o repositório:
-
-   ```bash
-   git clone https://github.com/odavid062/Dslist.git
-   cd Dslist
-   ```
-
-2. Compile o projeto com Maven:
-
-   ```bash
-   ./mvnw clean install
-   ```
-
-3. Execute a aplicação:
-
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-
-4. Acesse a aplicação no navegador:
-
-   [http://localhost:8080](http://localhost:8080)
-
-
----
-
-## 📂 Estrutura do Projeto
-
-```
-Dslist/
-├── src/
-│   └── main/
-│       ├── java/          # Código-fonte da aplicação
-│       └── resources/     # Arquivos de configuração e recursos estáticos
-└──  pom.xml                # Arquivo de build e dependências (Maven)
-
+    GAME ||--o{ BELONGING : pertence
+    GAME_LIST ||--o{ BELONGING : contem
 ```
 
 ---
 
-## 📄 Documentação da API
+## Funcionalidade em Destaque — Reordenação
 
-Se o Swagger estiver habilitado, a documentação da API estará disponível em:
+O endpoint `POST /lists/{listId}/replacement` permite mover um jogo de uma posição para outra dentro de uma lista. A lógica recalcula apenas as posições afetadas pelo movimento, sem reescrever a lista inteira:
 
-[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant CT as GameListController
+    participant S as GameListService
+    participant R as GameListRepository
+
+    C->>CT: POST /lists/1/replacement { sourceIndex: 3, destinationIndex: 0 }
+    CT->>S: move(listId=1, source=3, dest=0)
+    S->>R: searchByList(1) — busca jogos ordenados por posição
+    S->>S: remove posição 3, insere na posição 0
+    S->>S: recalcula range [0..3]
+    loop para cada i no range afetado
+        S->>R: updateBelongingPosition(listId, gameId, novaPos)
+    end
+    CT-->>C: 200 OK
+```
 
 ---
 
-## 🤝 Contribuindo
+## Destaques Técnicos
 
-Contribuições são bem-vindas!  
-Sinta-se à vontade para abrir *issues* ou enviar *pull requests*.
+### Chave Composta com `@EmbeddedId`
+A entidade `Belonging` modela um **many-to-many com atributo extra** (`position`) usando chave composta embutida:
+```java
+@Entity
+@Table(name = "tb_belonging")
+public class Belonging {
+    @EmbeddedId
+    private BelongingPK id = new BelongingPK(); // Game + GameList
+    private Integer position;
+}
+```
+
+### Spring Projections
+Queries otimizadas que retornam apenas os campos necessários, sem carregar a entidade completa:
+```java
+public interface GameMinProjection {
+    Long getId();
+    String getTitle();
+    Integer getGameYear();
+    String getImgUrl();
+    String getShortDescription();
+    Integer getPosition();
+}
+```
+
+### Múltiplos Perfis de Ambiente
+| Perfil | Banco | Uso |
+|---|---|---|
+| `test` (padrão) | H2 em memória | Desenvolvimento local sem configuração |
+| `dev` | PostgreSQL local | Testes integrados |
+| `prod` | PostgreSQL via env vars | Deploy em produção |
 
 ---
 
-## 📜 Licença
+## Stack
 
-Este projeto está licenciado sob a Licença MIT.  
-Consulte o arquivo [LICENSE](LICENSE) para mais informações.
+| Tecnologia | Versão | Uso |
+|---|---|---|
+| Java | 17 | Linguagem principal |
+| Spring Boot | 3.4.5 | Framework web |
+| Spring Data JPA | — | Persistência ORM |
+| H2 Database | — | Banco em memória (perfil test) |
+| PostgreSQL | — | Banco em produção |
+| Springdoc OpenAPI | 2.5.0 | Swagger UI automático |
+
+---
+
+## Como Executar
+
+### Com Docker (recomendado — perfil prod)
+```bash
+git clone https://github.com/odavid062/Dslist.git
+cd Dslist
+docker compose up --build
+```
+
+| Serviço | URL |
+|---|---|
+| API | http://localhost:8080 |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+
+### Com Maven (perfil test — H2, zero configuração)
+```bash
+git clone https://github.com/odavid062/Dslist.git
+cd Dslist
+./mvnw spring-boot:run
+```
+
+Acesse o console H2 em: `http://localhost:8080/h2-console`
+
+---
+
+## Endpoints
+
+### Jogos — `/games`
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/games` | Lista todos os jogos (resumido) |
+| `GET` | `/games/{id}` | Busca jogo por ID (detalhes completos) |
+
+### Listas — `/lists`
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/lists` | Lista todas as listas de jogos |
+| `GET` | `/lists/{id}` | Busca lista por ID |
+| `GET` | `/lists/{listId}/games` | Lista os jogos de uma lista (com posição) |
+| `POST` | `/lists/{listId}/replacement` | Reordena jogo dentro da lista |
+
+### Exemplos
+
+```bash
+# Listar todas as listas
+curl http://localhost:8080/lists
+
+# Jogos da lista 1 (Aventura e RPG)
+curl http://localhost:8080/lists/1/games
+
+# Mover jogo da posição 3 para a posição 0
+curl -X POST http://localhost:8080/lists/1/replacement \
+  -H "Content-Type: application/json" \
+  -d '{"sourceIndex": 3, "destinationIndex": 0}'
+
+# Detalhes completos de um jogo
+curl http://localhost:8080/games/1
+```
+
+---
+
+## Estrutura do Projeto
+
+```
+src/main/java/com/example/Dslist/
+├── config/
+│   ├── OpenApiConfig.java         # Configuração do Swagger
+│   └── WebConfig.java             # CORS via propriedades
+├── controller/
+│   ├── GameController.java        # GET /games, GET /games/{id}
+│   └── GameListController.java    # GET /lists, POST /lists/{id}/replacement
+├── dto/
+│   ├── GameDto.java               # Detalhes completos do jogo
+│   ├── GameMinDto.java            # Resumo do jogo (listagem)
+│   ├── GameListDto.java           # DTO da lista
+│   └── ReplacementDto.java        # { sourceIndex, destinationIndex }
+├── entities/
+│   ├── Game.java                  # Entidade principal
+│   ├── GameList.java              # Entidade lista
+│   ├── Belonging.java             # Many-to-many com posição
+│   └── BelongingPK.java           # Chave composta @EmbeddedId
+├── projections/
+│   └── GameMinProjection.java     # Projection otimizada para listagem
+├── repository/
+│   ├── GameRepository.java
+│   └── GameListRepository.java
+└── service/
+    ├── GameService.java
+    └── GameListService.java        # Lógica de reordenação
+```
+
+---
+
+## Dados de Exemplo
+
+A aplicação já vem com 10 jogos pré-carregados via `import.sql`:
+
+**Lista 1 — Aventura e RPG:** Mass Effect Trilogy, Red Dead Redemption 2, The Witcher 3, Sekiro, Ghost of Tsushima
+
+**Lista 2 — Plataforma:** Super Mario World, Hollow Knight, Ori and the Blind Forest, Cuphead, Sonic CD
+
+---
+
+## Autor
+
+**David Rodrigues**
+[![GitHub](https://img.shields.io/badge/GitHub-odavid062-181717?logo=github)](https://github.com/odavid062)

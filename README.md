@@ -51,15 +51,16 @@ sequenceDiagram
     participant C as Cliente
     participant CT as GameListController
     participant S as GameListService
-    participant R as GameListRepository
+    participant GR as GameRepository
+    participant GLR as GameListRepository
 
     C->>CT: POST /lists/1/replacement { sourceIndex: 3, destinationIndex: 0 }
     CT->>S: move(listId=1, source=3, dest=0)
-    S->>R: searchByList(1) — busca jogos ordenados por posição
+    S->>GR: searchByList(1) — busca jogos ordenados por posição
     S->>S: remove posição 3, insere na posição 0
     S->>S: recalcula range [0..3]
     loop para cada i no range afetado
-        S->>R: updateBelongingPosition(listId, gameId, novaPos)
+        S->>GLR: updateBelongingPosition(listId, gameId, novaPos)
     end
     CT-->>C: 200 OK
 ```
@@ -117,6 +118,11 @@ public interface GameMinProjection {
 
 ## Como Executar
 
+### Pré-requisitos
+- **Java 17** (JDK)
+- **Maven 3.9+** (ou utilizar o Maven Wrapper `./mvnw` incluso)
+- **Docker e Docker Compose** (opcional, para execução com contêineres e PostgreSQL)
+
 ### Com Docker (recomendado — perfil prod)
 ```bash
 git clone https://github.com/odavid062/Dslist.git
@@ -133,10 +139,42 @@ docker compose up --build
 ```bash
 git clone https://github.com/odavid062/Dslist.git
 cd Dslist
+
+# Linux / macOS
 ./mvnw spring-boot:run
+
+# Windows
+.\mvnw.cmd spring-boot:run
 ```
 
 Acesse o console H2 em: `http://localhost:8080/h2-console`
+- **JDBC URL:** `jdbc:h2:mem:testdb`
+- **User Name:** `sa`
+- **Password:** *(em branco)*
+
+### Executar Testes
+```bash
+# Linux / macOS
+./mvnw test
+
+# Windows
+.\mvnw.cmd test
+```
+
+---
+
+## Variáveis de Ambiente
+
+As seguintes variáveis de ambiente podem ser configuradas para customizar a execução da aplicação (via variáveis de sistema, arquivo `.env` ou `docker-compose.yml`):
+
+| Variável | Descrição | Padrão / Perfil |
+|---|---|---|
+| `APP_PROFILE` | Define o perfil ativo do Spring Boot (`test`, `dev`, `prod`) | `test` |
+| `CORS_ORIGINS` | Origens permitidas para requisições CORS (separadas por vírgula) | `http://localhost:5173,http://localhost:3000` |
+| `DB_URL` | URL de conexão JDBC com o PostgreSQL | Perfil `prod` |
+| `DB_USERNAME` | Usuário de autenticação no banco PostgreSQL | Perfil `prod` / docker-compose (`dslist`) |
+| `DB_PASSWORD` | Senha de autenticação no banco PostgreSQL | Perfil `prod` / docker-compose (`changeme`) |
+| `DB_NAME` | Nome da base de dados PostgreSQL | Utilizado no `docker-compose.yml` (`dslistdb`) |
 
 ---
 
@@ -181,31 +219,47 @@ curl http://localhost:8080/games/1
 ## Estrutura do Projeto
 
 ```
-src/main/java/com/example/Dslist/
-├── config/
-│   ├── OpenApiConfig.java         # Configuração do Swagger
-│   └── WebConfig.java             # CORS via propriedades
-├── controller/
-│   ├── GameController.java        # GET /games, GET /games/{id}
-│   └── GameListController.java    # GET /lists, POST /lists/{id}/replacement
-├── dto/
-│   ├── GameDto.java               # Detalhes completos do jogo
-│   ├── GameMinDto.java            # Resumo do jogo (listagem)
-│   ├── GameListDto.java           # DTO da lista
-│   └── ReplacementDto.java        # { sourceIndex, destinationIndex }
-├── entities/
-│   ├── Game.java                  # Entidade principal
-│   ├── GameList.java              # Entidade lista
-│   ├── Belonging.java             # Many-to-many com posição
-│   └── BelongingPK.java           # Chave composta @EmbeddedId
-├── projections/
-│   └── GameMinProjection.java     # Projection otimizada para listagem
-├── repository/
-│   ├── GameRepository.java
-│   └── GameListRepository.java
-└── service/
-    ├── GameService.java
-    └── GameListService.java        # Lógica de reordenação
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/Dslist/
+│   │   │   ├── DevSuperiorApplication.java  # Classe principal Spring Boot
+│   │   │   ├── config/
+│   │   │   │   ├── OpenApiConfig.java       # Configuração do Swagger OpenAPI
+│   │   │   │   └── WebConfig.java           # Configuração de CORS
+│   │   │   ├── controller/
+│   │   │   │   ├── GameController.java      # Endpoints /games
+│   │   │   │   └── GameListController.java  # Endpoints /lists
+│   │   │   ├── dto/
+│   │   │   │   ├── GameDto.java             # DTO detalhado de jogo
+│   │   │   │   ├── GameMinDto.java          # DTO resumido de jogo
+│   │   │   │   ├── GameListDto.java         # DTO de lista de jogos
+│   │   │   │   └── ReplacementDto.java      # DTO para troca de posições
+│   │   │   ├── entities/
+│   │   │   │   ├── Game.java                # Entidade Game (tb_game)
+│   │   │   │   ├── GameList.java            # Entidade GameList (tb_game_list)
+│   │   │   │   ├── Belonging.java           # Entidade de associação com posição
+│   │   │   │   └── BelongingPK.java         # Chave primária composta @EmbeddedId
+│   │   │   ├── projections/
+│   │   │   │   └── GameMinProjection.java   # Projeção SQL com posição
+│   │   │   ├── repository/
+│   │   │   │   ├── GameRepository.java      # Repositório JPA de jogos
+│   │   │   │   └── GameListRepository.java  # Repositório JPA de listas e update nativo
+│   │   │   └── service/
+│   │   │       ├── GameService.java         # Regras de negócio de jogos
+│   │   │       └── GameListService.java     # Regras de negócio e lógica de reordenação
+│   │   └── resources/
+│   │       ├── application.properties       # Configuração base e perfil ativo
+│   │       ├── application-test.properties  # Configuração H2 em memória
+│   │       ├── application-dev.properties   # Configuração PostgreSQL local
+│   │       ├── application-prod.properties  # Configuração PostgreSQL via env vars
+│   │       └── import.sql                   # Carga inicial de dados
+│   └── test/
+│       └── java/com/example/Dslist/
+│           └── DevSuperiorApplicationTests.java # Teste de carregamento do contexto Spring
+├── docker-compose.yml                       # Orquestração da API e PostgreSQL
+├── Dockerfile                               # Multi-stage build da imagem Docker
+├── pom.xml                                  # Dependências e build Maven
+└── mvnw / mvnw.cmd                          # Maven Wrapper
 ```
 
 ---
